@@ -199,6 +199,10 @@ lint_overflowing_bin_hex = literal out of range for `{$ty}`
     .suggestion = consider using the type `{$suggestion_ty}` instead
     .help = consider using the type `{$suggestion_ty}` instead
 
+lint_not_memory_layout = literal out of range for `{$ty}`
+    .suggestion = consider using a negative literal instead
+    .note = literals in binary or hexidecimal notation represent mathematical values, not memory layouts
+
 lint_overflowing_int = literal out of range for `{$ty}`
     .note = the literal `{$lit}` does not fit into the type `{$ty}` whose range is `{$min}..={$max}`
     .help = consider using the type `{$suggestion_ty}` instead

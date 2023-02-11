@@ -1,8 +1,9 @@
 use crate::lints::{
     AtomicOrderingFence, AtomicOrderingLoad, AtomicOrderingStore, ImproperCTypes,
-    InvalidAtomicOrderingDiag, OnlyCastu8ToChar, OverflowingBinHex, OverflowingBinHexSign,
-    OverflowingBinHexSub, OverflowingInt, OverflowingIntHelp, OverflowingLiteral, OverflowingUInt,
-    RangeEndpointOutOfRange, UnusedComparisons, VariantSizeDifferencesDiag,
+    InvalidAtomicOrderingDiag, NotMemoryLayout, OnlyCastu8ToChar, OverflowingBinHex,
+    OverflowingBinHexSign, OverflowingBinHexSub, OverflowingInt, OverflowingIntHelp,
+    OverflowingLiteral, OverflowingUInt, RangeEndpointOutOfRange, UnusedComparisons,
+    VariantSizeDifferencesDiag,
 };
 use crate::{LateContext, LateLintPass, LintContext};
 use rustc_ast as ast;
@@ -223,6 +224,7 @@ fn report_bin_hex_error(
     repr_str: String,
     val: u128,
     negative: bool,
+    fits_without_sign_bit: bool,
 ) {
     let (t, actually) = match ty {
         attr::IntType::SignedInt(t) => {
@@ -238,6 +240,16 @@ fn report_bin_hex_error(
             (t.name_str(), actually.to_string())
         }
     };
+
+    if fits_without_sign_bit {
+        cx.emit_spanned_lint(
+            OVERFLOWING_LITERALS,
+            expr.span,
+            NotMemoryLayout { ty: t, span: expr.span.shrink_to_lo() },
+        );
+        return;
+    }
+
     let sign =
         if negative { OverflowingBinHexSign::Negative } else { OverflowingBinHexSign::Positive };
     let sub = get_type_suggestion(cx.typeck_results().node_type(expr.hir_id), val, negative).map(
@@ -317,10 +329,22 @@ fn lint_int_literal<'tcx>(
     let max = max as u128;
     let negative = type_limits.negated_expr_id == Some(e.hir_id);
 
+    let out_of_range = |v| (negative && v > max + 1) || (!negative && v > max);
+
     // Detect literal value out of range [min, max] inclusive
     // avoiding use of -min to prevent overflow/panic
-    if (negative && v > max + 1) || (!negative && v > max) {
+    if out_of_range(v) {
         if let Some(repr_str) = get_bin_hex_repr(cx, lit) {
+            // At this point, we know that the literal is an unsigned literal
+            // that overflows. Since we are also in this branch, we know that
+            // it's either a binary or hex literal.
+            //
+            // If we have an overflowing signed literal, it's possible that the
+            // user is attempting to provide a memory representation of a binary
+            // instead. We can conservatively test this by masking out the
+            // "sign bit" to see if it would fit.
+            let fits_without_sign_bit =
+                !out_of_range(v & !(1 << int_type.bit_width().expect("to be normalized") - 1));
             report_bin_hex_error(
                 cx,
                 e,
@@ -329,6 +353,7 @@ fn lint_int_literal<'tcx>(
                 repr_str,
                 v,
                 negative,
+                fits_without_sign_bit,
             );
             return;
         }
@@ -397,6 +422,7 @@ fn lint_uint_literal<'tcx>(
                 Integer::from_uint_ty(cx, t).size(),
                 repr_str,
                 lit_val,
+                false,
                 false,
             );
             return;

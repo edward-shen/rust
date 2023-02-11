@@ -1,0 +1,27 @@
+error: literal out of range for `i32`
+  --> $DIR/lint-memory-repr-mathematic-literal-confusion.rs:3:18
+   |
+LL |     let _: i32 = 0b1000_0000_0000_0000_0000_0000_0000_0000i32;
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: the literal `0b1000_0000_0000_0000_0000_0000_0000_0000i32` (decimal `2147483648`) does not fit into the type `i32` and will become `-2147483648i32`
+   = note: `#[deny(overflowing_literals)]` on by default
+help: literals in binary or hexidecimal notation represent mathematical values, not memory layouts
+   |
+LL |     let _: i32 = -0b1000_0000_0000_0000_0000_0000_0000_0000i32;
+   |                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+error: literal out of range for `i32`
+  --> $DIR/lint-memory-repr-mathematic-literal-confusion.rs:7:18
+   |
+LL |     let _: i32 = 0b1000_0000_0000_0000_0000_0000_0000_0000;
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: the literal `0b1000_0000_0000_0000_0000_0000_0000_0000` (decimal `2147483648`) does not fit into the type `i32` and will become `-2147483648i32`
+help: literals in binary or hexidecimal notation represent mathematical values, not memory layouts
+   |
+LL |     let _: i32 = -0b1000_0000_0000_0000_0000_0000_0000_0000;
+   |                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+error: aborting due to 2 previous errors
+

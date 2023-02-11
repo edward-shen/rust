@@ -1245,6 +1245,15 @@ pub enum OverflowingBinHexSub<'a> {
 }
 
 #[derive(LintDiagnostic)]
+#[diag(lint_not_memory_layout)]
+#[note]
+pub struct NotMemoryLayout<'a> {
+    pub ty: &'a str,
+    #[suggestion(code = "-", applicability = "maybe-incorrect")]
+    pub span: Span,
+}
+
+#[derive(LintDiagnostic)]
 #[diag(lint_overflowing_int)]
 #[note]
 pub struct OverflowingInt<'a> {
